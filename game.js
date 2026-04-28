@@ -2223,36 +2223,40 @@ function drawDecorations(ctx) {
       const wx   = cx * CELL + rng() * CELL;
       const wy   = cy * CELL + rng() * CELL;
       const type = Math.floor(rng() * 3);
-      const a    = 0.07 + rng() * 0.07;
-      const r    = 7   + rng() * 11;
-
-      ctx.globalAlpha = a;
+      const r = 7 + rng() * 11;
 
       if (type === 0) {
         // ルーン円：外輪 + 十字
-        ctx.strokeStyle = '#6633aa'; ctx.lineWidth = 1;
+        ctx.strokeStyle = '#9955ee'; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6; ctx.shadowColor = '#7733cc';
         ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(wx, wy, r * 0.45, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
+        ctx.shadowBlur = 0;
       } else if (type === 1) {
         // クリスタル：菱形シルエット
-        ctx.fillStyle = '#334466';
+        ctx.fillStyle = '#2255aa';
+        ctx.strokeStyle = '#4488dd'; ctx.lineWidth = 1;
+        ctx.shadowBlur = 5; ctx.shadowColor = '#3366bb';
         ctx.beginPath();
         ctx.moveTo(wx,           wy - r);
         ctx.lineTo(wx + r * 0.4, wy);
         ctx.lineTo(wx,           wy + r * 0.65);
         ctx.lineTo(wx - r * 0.4, wy);
-        ctx.closePath(); ctx.fill();
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
       } else {
         // 地面のひび：折れ線
-        ctx.strokeStyle = '#3a1a44'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+        ctx.strokeStyle = '#6633aa'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+        ctx.shadowBlur = 4; ctx.shadowColor = '#442266';
         ctx.beginPath();
         ctx.moveTo(wx - r,           wy + r * 0.2);
         ctx.lineTo(wx - r * 0.2,     wy - r * 0.3);
         ctx.lineTo(wx + r * 0.5,     wy + r * 0.1);
         ctx.lineTo(wx + r,           wy - r * 0.2);
         ctx.stroke();
+        ctx.shadowBlur = 0;
       }
     }
   }
