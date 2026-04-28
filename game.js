@@ -2059,8 +2059,9 @@ const gs = {
   grid:         null,
   kills:        0,
   diffLevel:    0,
-  pendingChest: false,
-  playerName:   '',
+  pendingChest:   false,
+  playerName:     '',
+  tutorialTimer:  2.5,
 };
 
 // ════════════════════════════════════════════════════════
@@ -2122,6 +2123,9 @@ function update(dt) {
     UpgradeSystem.show(gs.player);
   }
 
+  // tutorial hint
+  if (gs.tutorialTimer > 0) gs.tutorialTimer -= dt;
+
   // game over
   if (!gs.player.alive) triggerGameOver();
 
@@ -2180,6 +2184,25 @@ function render() {
   // ── 画面固定のHUD・演出（ワールド変換の外）──
   BossSystem.drawHUD(canvas, ctx);
   BossSystem.drawAnnouncement(canvas, ctx);
+
+  // チュートリアルヒント
+  if (gs.tutorialTimer > 0) {
+    const fade = Math.min(1, gs.tutorialTimer / 0.6); // 最後0.6秒でフェードアウト
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.textAlign = 'center';
+    const cx = canvas.width / 2;
+    const cy = canvas.height * 0.72;
+    const fs = Math.round(Math.min(canvas.width * 0.038, 16));
+    ctx.font = `bold ${fs}px 'Courier New'`;
+    ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(cx - canvas.width * 0.32, cy - fs * 1.1, canvas.width * 0.64, fs * 2.2);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('敵に当たるとダメージを受けます', cx, cy + fs * 0.35);
+    ctx.restore();
+  }
 }
 
 function drawGrid(ctx) {
@@ -2334,7 +2357,8 @@ function initGame() {
   WeaponManager.reset();
   ChestSystem.reset();
   BossSystem.reset();
-  gs.pendingChest = false;
+  gs.pendingChest   = false;
+  gs.tutorialTimer  = 2.5;
 
   // reset shake
   shake.x = shake.y = shake.timer = shake.intensity = 0;
