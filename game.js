@@ -492,124 +492,135 @@ const TIERS = [
 ];
 
 // ── enemy draw helpers ──
+
+// Tier 0: ダークスライム — 紫の丸に怒り顔
 function _drawSlime(ctx, x, y, r, flash) {
-  const t = Date.now() * 0.002;
-  const wb = Math.sin(t) * 0.07;
   ctx.save();
-  if (flash) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r*1.1, 0, Math.PI*2); ctx.fill(); ctx.restore(); return; }
-  // outer glow
-  ctx.shadowBlur = 14; ctx.shadowColor = '#9922cc';
-  // body blob
-  ctx.fillStyle = '#2a0848';
-  ctx.beginPath();
-  ctx.ellipse(x, y + r*0.12, r*(1+wb), r*(0.88-wb), 0, 0, Math.PI*2);
-  ctx.fill();
-  // highlight sheen
+  ctx.shadowBlur = 12; ctx.shadowColor = '#8800cc';
+  ctx.fillStyle = flash ? '#ffffff' : '#3a0a6a';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(170,80,255,0.32)';
-  ctx.beginPath();
-  ctx.ellipse(x - r*0.22, y - r*0.22, r*0.42, r*0.28, -0.4, 0, Math.PI*2);
-  ctx.fill();
-  // 3 glowing eyes
-  const ey = y - r*0.14;
-  for (const [ex, eyo] of [[-r*0.36,0],[0,-r*0.1],[r*0.36,0]]) {
-    ctx.fillStyle = '#cc44ff'; ctx.shadowBlur = 9; ctx.shadowColor = '#cc44ff';
-    ctx.beginPath(); ctx.arc(x+ex, ey+eyo, r*0.12, 0, Math.PI*2); ctx.fill();
-  }
+  if (flash) { ctx.restore(); return; }
+
+  // 怒り眉（逆ハの字）
+  ctx.strokeStyle = '#dd55ff'; ctx.lineWidth = r*0.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r*0.5, y-r*0.22); ctx.lineTo(x-r*0.18, y-r*0.38); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.5, y-r*0.22); ctx.lineTo(x+r*0.18, y-r*0.38); ctx.stroke();
+  // 目
+  ctx.fillStyle = '#ff44ff'; ctx.shadowBlur = 5; ctx.shadowColor = '#ff44ff';
+  ctx.beginPath(); ctx.arc(x-r*0.28, y-r*0.1, r*0.16, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+r*0.28, y-r*0.1, r*0.16, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
+  // ギザギザの口
+  ctx.strokeStyle = '#dd55ff'; ctx.lineWidth = r*0.15; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x-r*0.42, y+r*0.22);
+  ctx.lineTo(x-r*0.22, y+r*0.40);
+  ctx.lineTo(x,        y+r*0.24);
+  ctx.lineTo(x+r*0.22, y+r*0.40);
+  ctx.lineTo(x+r*0.42, y+r*0.22);
+  ctx.stroke();
   ctx.restore();
 }
 
+// Tier 1: ゴースト — 白いゴースト形に邪悪な顔
 function _drawShadowHood(ctx, x, y, r, angle, flash) {
   ctx.save();
-  ctx.translate(x, y);
-  if (flash) { ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,r*1.1,0,Math.PI*2); ctx.fill(); ctx.restore(); return; }
-  // cloak body
-  ctx.fillStyle = '#0d0818'; ctx.shadowBlur = 10; ctx.shadowColor = '#5500aa';
+  ctx.shadowBlur = 14; ctx.shadowColor = '#aaaaff';
+  ctx.fillStyle = flash ? '#ffffff' : 'rgba(200,190,255,0.88)';
+  // ゴースト形（上半円 + ヒラヒラ下部）
   ctx.beginPath();
-  ctx.moveTo(0, -r*1.3);
-  ctx.bezierCurveTo(-r*1.0,-r*0.7,-r*1.25,r*0.5,-r*0.7,r*1.1);
-  ctx.lineTo(r*0.7,r*1.1);
-  ctx.bezierCurveTo(r*1.25,r*0.5,r*1.0,-r*0.7,0,-r*1.3);
+  ctx.arc(x, y - r*0.2, r, Math.PI, 0);
+  // 下のヒラヒラ3波
+  const segments = 3;
+  const bx = x + r, by = y - r*0.2;
+  for (let i = 0; i < segments; i++) {
+    const x1 = bx - (2*r / segments) * (i + 0.5);
+    const x2 = bx - (2*r / segments) * (i + 1);
+    const dir = i % 2 === 0 ? 1 : -1;
+    ctx.quadraticCurveTo(x1, by + r*(0.55 + 0.15*dir), x2, by + r*0.2);
+  }
+  ctx.closePath();
   ctx.fill();
-  // hood head
-  ctx.fillStyle = '#140e28'; ctx.shadowBlur = 0;
-  ctx.beginPath(); ctx.arc(0,-r*0.5,r*0.88,0,Math.PI*2); ctx.fill();
-  // eyes
-  ctx.fillStyle='#aa33ff'; ctx.shadowBlur=10; ctx.shadowColor='#cc55ff';
-  ctx.beginPath(); ctx.ellipse(-r*0.28,-r*0.54,r*0.18,r*0.13,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( r*0.28,-r*0.54,r*0.18,r*0.13,0,0,Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
+  if (flash) { ctx.restore(); return; }
+  // 邪悪な目（下げた三角形）
+  ctx.fillStyle = '#220040';
+  ctx.beginPath(); ctx.arc(x-r*0.3, y-r*0.28, r*0.18, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+r*0.3, y-r*0.28, r*0.18, 0, Math.PI*2); ctx.fill();
+  // にやり笑い
+  ctx.strokeStyle = '#220040'; ctx.lineWidth = r*0.16; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(x, y+r*0.05, r*0.32, 0.2, Math.PI-0.2);
+  ctx.stroke();
   ctx.restore();
 }
 
+// Tier 2: ゴーレム — 大きな暗い丸に怒りの顔と牙
 function _drawGolem(ctx, x, y, r, flash) {
   ctx.save();
-  if (flash) { ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(x,y,r*1.1,0,Math.PI*2); ctx.fill(); ctx.restore(); return; }
-  ctx.shadowBlur=14; ctx.shadowColor='#7700cc';
-  // arms
-  ctx.fillStyle='#252030';
-  ctx.beginPath(); ctx.ellipse(x-r*1.0,y,r*0.36,r*0.52,-0.3,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(x+r*1.0,y,r*0.36,r*0.52, 0.3,0,Math.PI*2); ctx.fill();
-  // main body
-  ctx.fillStyle='#201e2e';
-  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-  // stone texture cracks
-  ctx.shadowBlur=0;
-  ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(x-r*0.4,y-r*0.5); ctx.lineTo(x-r*0.1,y+r*0.1); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+r*0.2,y-r*0.3); ctx.lineTo(x+r*0.5,y+r*0.4); ctx.stroke();
-  // purple gem
-  ctx.shadowBlur=20; ctx.shadowColor='#bb00ff';
-  ctx.fillStyle='#6600bb';
-  ctx.beginPath(); ctx.moveTo(x,y-r*0.33); ctx.lineTo(x+r*0.23,y); ctx.lineTo(x,y+r*0.33); ctx.lineTo(x-r*0.23,y); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#cc55ff';
-  ctx.beginPath(); ctx.moveTo(x,y-r*0.22); ctx.lineTo(x+r*0.15,y); ctx.lineTo(x,y+r*0.22); ctx.lineTo(x-r*0.15,y); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(255,200,255,0.8)';
-  ctx.beginPath(); ctx.arc(x-r*0.06,y-r*0.1,r*0.07,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur=0;
-  // red eyes
-  ctx.fillStyle='#ff3377'; ctx.shadowBlur=7; ctx.shadowColor='#ff3377';
-  ctx.beginPath(); ctx.arc(x-r*0.3,y-r*0.52,r*0.1,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x+r*0.3,y-r*0.52,r*0.1,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur=0;
+  ctx.shadowBlur = 16; ctx.shadowColor = '#7700cc';
+  ctx.fillStyle = flash ? '#ffffff' : '#1e1830';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  if (flash) { ctx.restore(); return; }
+  // ひび割れ模様
+  ctx.strokeStyle = 'rgba(100,60,180,0.5)'; ctx.lineWidth = r*0.1;
+  ctx.beginPath(); ctx.moveTo(x-r*0.5,y-r*0.7); ctx.lineTo(x-r*0.1,y+r*0.1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.3,y-r*0.5); ctx.lineTo(x+r*0.6,y+r*0.5); ctx.stroke();
+  // 怒り眉
+  ctx.strokeStyle = '#ff3366'; ctx.lineWidth = r*0.22; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r*0.55,y-r*0.28); ctx.lineTo(x-r*0.18,y-r*0.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.55,y-r*0.28); ctx.lineTo(x+r*0.18,y-r*0.45); ctx.stroke();
+  // 赤く光る目
+  ctx.fillStyle = '#ff2255'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff2255';
+  ctx.beginPath(); ctx.arc(x-r*0.3, y-r*0.15, r*0.18, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+r*0.3, y-r*0.15, r*0.18, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  // 牙口
+  ctx.strokeStyle = '#cc88ff'; ctx.lineWidth = r*0.14; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r*0.45,y+r*0.22); ctx.lineTo(x+r*0.45,y+r*0.22); ctx.stroke();
+  ctx.fillStyle = '#ddaaff';
+  ctx.beginPath(); ctx.moveTo(x-r*0.25,y+r*0.22); ctx.lineTo(x-r*0.18,y+r*0.44); ctx.lineTo(x-r*0.10,y+r*0.22); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+r*0.10,y+r*0.22); ctx.lineTo(x+r*0.18,y+r*0.44); ctx.lineTo(x+r*0.25,y+r*0.22); ctx.fill();
   ctx.restore();
 }
 
+// Tier 3: ダークメイジ — 炎をまとう紫の丸、狂った笑い顔
 function _drawDarkMage(ctx, x, y, r, flash) {
   const t = Date.now() * 0.003;
   ctx.save();
-  ctx.translate(x, y);
-  if (flash) { ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,r*1.1,0,Math.PI*2); ctx.fill(); ctx.restore(); return; }
-  // flame aura
-  ctx.shadowBlur=18; ctx.shadowColor='#9900ff';
-  for (let i=0;i<5;i++) {
-    const a=(i/5)*Math.PI*2+t;
-    const flicker=0.6+0.4*Math.sin(t*3+i);
-    ctx.fillStyle=`rgba(120,0,200,${0.5*flicker})`;
-    ctx.beginPath();
-    ctx.ellipse(Math.cos(a)*r*0.85,Math.sin(a)*r*0.72-r*0.08,r*0.17,r*0.27,a+Math.PI/2,0,Math.PI*2);
-    ctx.fill();
+  // 紫炎オーラ
+  if (!flash) {
+    ctx.shadowBlur = 20; ctx.shadowColor = '#aa00ff';
+    for (let i = 0; i < 6; i++) {
+      const a = (i/6)*Math.PI*2 + t;
+      const flk = 0.65 + 0.35*Math.sin(t*4+i);
+      ctx.fillStyle = `rgba(130,0,220,${0.45*flk})`;
+      ctx.beginPath();
+      ctx.ellipse(x+Math.cos(a)*r*0.88, y+Math.sin(a)*r*0.78, r*0.22, r*0.14, a, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
   }
-  // robe
-  ctx.fillStyle='#0e0820'; ctx.shadowBlur=8; ctx.shadowColor='#6600cc';
+  // 本体
+  ctx.fillStyle = flash ? '#ffffff' : '#1a0530';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  if (flash) { ctx.restore(); return; }
+  // 怪しい細目
+  ctx.fillStyle = '#ee00ff'; ctx.shadowBlur = 8; ctx.shadowColor = '#ff44ff';
+  ctx.beginPath(); ctx.ellipse(x-r*0.28, y-r*0.18, r*0.22, r*0.1, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+r*0.28, y-r*0.18, r*0.22, r*0.1,  0.3, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  // 狂ったにやり笑い（曲がった口）
+  ctx.strokeStyle = '#ee00ff'; ctx.lineWidth = r*0.16; ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(0,-r*1.1);
-  ctx.bezierCurveTo(-r*0.85,-r*0.6,-r*0.95,r*0.3,-r*0.65,r);
-  ctx.lineTo(r*0.65,r);
-  ctx.bezierCurveTo(r*0.95,r*0.3,r*0.85,-r*0.6,0,-r*1.1);
-  ctx.fill();
-  // hood
-  ctx.fillStyle='#140e28'; ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.arc(0,-r*0.46,r*0.74,0,Math.PI*2); ctx.fill();
-  // skull face
-  ctx.fillStyle='#c8b0a8';
-  ctx.beginPath(); ctx.ellipse(0,-r*0.5,r*0.34,r*0.37,0,0,Math.PI*2); ctx.fill();
-  // eye sockets
-  ctx.fillStyle='#bb00ee'; ctx.shadowBlur=10; ctx.shadowColor='#cc00ff';
-  ctx.beginPath(); ctx.ellipse(-r*0.16,-r*0.52,r*0.12,r*0.10,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( r*0.16,-r*0.52,r*0.12,r*0.10,0,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur=0;
+  ctx.moveTo(x-r*0.45, y+r*0.15);
+  ctx.bezierCurveTo(x-r*0.2, y+r*0.48, x+r*0.2, y+r*0.48, x+r*0.45, y+r*0.15);
+  ctx.stroke();
+  // 口の端がつり上がった感じ
+  ctx.beginPath(); ctx.moveTo(x-r*0.45,y+r*0.15); ctx.lineTo(x-r*0.45,y+r*0.32); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.45,y+r*0.15); ctx.lineTo(x+r*0.45,y+r*0.32); ctx.stroke();
   ctx.restore();
 }
 
