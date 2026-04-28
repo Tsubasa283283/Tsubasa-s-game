@@ -1718,7 +1718,7 @@ const BossSystem = {
     }
     // ボスをプレイヤーから320px離れた場所にスポーン
     this.bossCount++;
-    const hpMult = this.bossCount === 1 ? 1 : 3; // 2体目以降はHP3倍
+    const hpMult = Math.pow(3, this.bossCount - 1); // 1体目×1, 2体目×3, 3体目×9...
     const a = randAngle();
     gs.enemies.push(new Boss(
       gs.player.x + Math.cos(a) * 320,
