@@ -772,13 +772,13 @@ function _drawBoss(ctx, x, y, r, flash) {
 }
 
 class Boss {
-  constructor(x, y) {
+  constructor(x, y, hpMult = 1) {
     this.x           = x;
     this.y           = y;
     this.isBoss      = true;
     this.tier        = -1;
     this.radius      = 34;
-    this.maxHp       = 320 + gs.diffLevel * 90;
+    this.maxHp       = (320 + gs.diffLevel * 90) * hpMult;
     this.hp          = this.maxHp;
     this.speed       = 50 + gs.diffLevel * 3;
     this.damage      = 25;
@@ -1697,6 +1697,7 @@ const BossSystem = {
   nextBossAt:   30,   // 最初は30秒後
   interval:     60,   // 以降1分おき
   announcement: 0,    // 演出の残り秒数
+  bossCount:    0,    // 何体目か（2体目以降はHP強化）
 
   update(dt) {
     if (!gs.running || gs.paused) return;
@@ -1716,13 +1717,16 @@ const BossSystem = {
       }
     }
     // ボスをプレイヤーから320px離れた場所にスポーン
+    this.bossCount++;
+    const hpMult = this.bossCount === 1 ? 1 : 3; // 2体目以降はHP3倍
     const a = randAngle();
     gs.enemies.push(new Boss(
       gs.player.x + Math.cos(a) * 320,
-      gs.player.y + Math.sin(a) * 320
+      gs.player.y + Math.sin(a) * 320,
+      hpMult
     ));
     this.announcement = 2.8;
-    this.quietUntil   = gs.elapsed + 5; // ボス出現後5秒は通常敵をスポーンしない
+    this.quietUntil   = gs.elapsed + 2; // ボス出現後2秒は通常敵をスポーンしない
     screenShake(18, 0.7);
     AudioManager.playBossAlert();
     this.nextBossAt = Infinity; // 倒したあとに再設定
@@ -1793,6 +1797,7 @@ const BossSystem = {
     this.nextBossAt   = 30;
     this.announcement = 0;
     this.quietUntil   = 0;
+    this.bossCount    = 0;
   },
 };
 
@@ -1914,7 +1919,8 @@ const AudioManager = {
   startBGM() {
     if (!this.ctx) return;
     if (this._bgmTimer) clearTimeout(this._bgmTimer);
-    // 古い bgmGain を切り離して新規作成（スケジュール済みノードを無音化）
+    // 旧 bgmGain を master から切り離し、新しいノードを作る
+    // （旧ノードに接続済みの oscillator は無音になる）
     if (this.bgmGain) this.bgmGain.disconnect();
     this.bgmGain = this.ctx.createGain();
     this.bgmGain.gain.value = this.muted ? 0 : 0.30;
@@ -1924,8 +1930,8 @@ const AudioManager = {
 
   stopBGM() {
     if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
-    // bgmGain を切り離して鳴りかけのノードを即座に無音化
-    if (this.bgmGain) { this.bgmGain.disconnect(); this.bgmGain = null; }
+    // master から切り離して即座に無音化��null にしない）
+    if (this.bgmGain) this.bgmGain.disconnect();
   },
 
   // ── SFX: レベルアップ（上昇キラキラ） ──
