@@ -693,6 +693,143 @@ class Enemy {
 }
 
 // ════════════════════════════════════════════════════════
+//  6b. BOSS
+// ════════════════════════════════════════════════════════
+
+function _drawBoss(ctx, x, y, r, flash) {
+  const t = Date.now() * 0.002;
+  ctx.save();
+
+  // 禍々しいオーラ
+  if (!flash) {
+    ctx.shadowBlur = 32; ctx.shadowColor = '#cc0022';
+    for (let i = 0; i < 8; i++) {
+      const a  = (i/8)*Math.PI*2 + t*0.6;
+      const fl = 0.5 + 0.5*Math.sin(t*3 + i*1.3);
+      ctx.fillStyle = `rgba(200,0,30,${0.16*fl})`;
+      ctx.beginPath();
+      ctx.ellipse(x+Math.cos(a)*r*0.92, y+Math.sin(a)*r*0.82, r*0.28, r*0.18, a, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // 本体
+  ctx.fillStyle = flash ? '#ffffff' : '#1a0008';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  if (flash) { ctx.restore(); return; }
+
+  // 大きな湾曲ツノ（左右）
+  ctx.strokeStyle = '#cc2244'; ctx.lineWidth = r*0.18; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r*0.45, y-r*0.62);
+  ctx.bezierCurveTo(x-r*1.2, y-r*1.1, x-r*1.5, y-r*1.8, x-r*0.85, y-r*2.2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.45, y-r*0.62);
+  ctx.bezierCurveTo(x+r*1.2, y-r*1.1, x+r*1.5, y-r*1.8, x+r*0.85, y-r*2.2); ctx.stroke();
+  ctx.fillStyle = '#ff3355';
+  ctx.beginPath(); ctx.arc(x-r*0.85, y-r*2.2, r*0.1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+r*0.85, y-r*2.2, r*0.1, 0, Math.PI*2); ctx.fill();
+
+  // ひび割れ模様
+  ctx.strokeStyle = 'rgba(200,20,40,0.38)'; ctx.lineWidth = r*0.07;
+  ctx.beginPath(); ctx.moveTo(x-r*0.6,y-r*0.5); ctx.lineTo(x-r*0.1,y+r*0.1); ctx.lineTo(x+r*0.3,y-r*0.2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.5,y-r*0.4); ctx.lineTo(x+r*0.7,y+r*0.3); ctx.stroke();
+
+  // 3つの目（中央+左右）
+  ctx.shadowBlur = 14; ctx.shadowColor = '#ff0000';
+  ctx.fillStyle = '#ff1133';
+  ctx.beginPath(); ctx.ellipse(x, y-r*0.28, r*0.13, r*0.09, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x-r*0.38, y-r*0.08, r*0.20, r*0.14, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+r*0.38, y-r*0.08, r*0.20, r*0.14,  0.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.beginPath(); ctx.ellipse(x-r*0.38, y-r*0.08, r*0.05, r*0.13, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+r*0.38, y-r*0.08, r*0.05, r*0.13, 0, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 怒り眉
+  ctx.strokeStyle = '#cc0022'; ctx.lineWidth = r*0.18; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r*0.62, y-r*0.32); ctx.lineTo(x-r*0.20, y-r*0.42); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.62, y-r*0.32); ctx.lineTo(x+r*0.20, y-r*0.42); ctx.stroke();
+
+  // 牙をむいた口
+  ctx.strokeStyle = '#cc0022'; ctx.lineWidth = r*0.12;
+  ctx.beginPath();
+  ctx.moveTo(x-r*0.55, y+r*0.28);
+  ctx.bezierCurveTo(x-r*0.2, y+r*0.56, x+r*0.2, y+r*0.56, x+r*0.55, y+r*0.28);
+  ctx.stroke();
+  ctx.fillStyle = '#ffdddd';
+  [[x-r*0.38,y+r*0.30],[x-r*0.18,y+r*0.34],[x+r*0.18,y+r*0.34],[x+r*0.38,y+r*0.30]].forEach(([fx,fy]) => {
+    ctx.beginPath(); ctx.moveTo(fx-r*0.06,fy); ctx.lineTo(fx,fy+r*0.18); ctx.lineTo(fx+r*0.06,fy); ctx.fill();
+  });
+
+  // 名前タグ（ボス頭上）
+  ctx.shadowBlur = 8; ctx.shadowColor = '#ff0022';
+  ctx.fillStyle = '#ff4455';
+  ctx.font = `bold ${Math.round(r*0.44)}px 'Courier New'`;
+  ctx.textAlign = 'center';
+  ctx.fillText('DARK LORD', x, y - r*2.55);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+class Boss {
+  constructor(x, y) {
+    this.x          = x;
+    this.y          = y;
+    this.isBoss     = true;
+    this.tier       = -1;
+    this.radius     = 34;
+    this.maxHp      = 320 + gs.diffLevel * 90;
+    this.hp         = this.maxHp;
+    this.speed      = 50 + gs.diffLevel * 3;
+    this.damage     = 25;
+    this.xpVal      = 40;
+    this.color      = '#ff2244';
+    this.glow       = '#ff0000';
+    this.alive      = true;
+    this.flashT     = 0;
+    this.angle      = 0;
+    this.contactCool = 0;
+  }
+
+  update(dt, player) {
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+    this.angle = Math.atan2(dy, dx);
+    this.x += (dx/d) * this.speed * dt;
+    this.y += (dy/d) * this.speed * dt;
+    if (this.flashT      > 0) this.flashT      -= dt;
+    if (this.contactCool > 0) this.contactCool -= dt;
+    if (d < this.radius + player.radius && this.contactCool <= 0) {
+      player.takeDamage(this.damage);
+      this.contactCool = 0.9;
+    }
+  }
+
+  takeDamage(amount) {
+    this.hp -= amount;
+    this.flashT = 0.1;
+    if (this.hp <= 0) this.alive = false;
+  }
+
+  draw(ctx) {
+    _drawBoss(ctx, this.x, this.y, this.radius, this.flashT > 0);
+    // 頭上のHPバー（常時表示）
+    const bw = this.radius * 3.8, bh = 7;
+    const bx = this.x - bw/2, by = this.y - this.radius - 18;
+    const pct = this.hp / this.maxHp;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(bx-1, by-1, bw+2, bh+2);
+    ctx.fillStyle = pct > 0.5 ? '#ff3344' : pct > 0.25 ? '#ff8800' : '#ffee00';
+    ctx.fillRect(bx, by, bw*pct, bh);
+    ctx.strokeStyle = '#ff2244'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.restore();
+  }
+}
+
+// ════════════════════════════════════════════════════════
 //  7. BULLETS
 // ════════════════════════════════════════════════════════
 function makeBullet() {
@@ -740,6 +877,7 @@ function cleanDeadEnemies() {
       spawnOrb(e.x, e.y, e.xpVal);
       gs.kills++;
       AudioManager.playKill();
+      if (e.isBoss) BossSystem.onBossDied(e.x, e.y);
       gs.enemies.splice(i, 1);
     }
   }
@@ -1103,7 +1241,7 @@ class WeaponOrbit {
     this.type    = 'orbit';
     this.level   = 1;
     this.count   = 2;
-    this.orbitR  = 58;
+    this.orbitR  = 90;
     this.damage  = 14;
     this.speed   = 2.2;   // rad/s
     this.angle   = 0;
@@ -1114,7 +1252,7 @@ class WeaponOrbit {
     this.level++;
     this.count++;
     this.damage  = Math.round(this.damage * 1.2);
-    this.orbitR += 8;
+    this.orbitR += 12;
   }
 
   update(dt, player, enemies) {
@@ -1474,6 +1612,110 @@ const ChestSystem = {
 };
 
 // ════════════════════════════════════════════════════════
+//  15b. BOSS SYSTEM
+// ════════════════════════════════════════════════════════
+const BossSystem = {
+  nextBossAt:   30,   // 最初は30秒後
+  interval:     60,   // 以降1分おき
+  announcement: 0,    // 演出の残り秒数
+
+  update(dt) {
+    if (!gs.running || gs.paused) return;
+    if (gs.elapsed >= this.nextBossAt && !gs.enemies.some(e => e.isBoss)) {
+      this._spawn();
+    }
+    if (this.announcement > 0) this.announcement -= dt;
+  },
+
+  _spawn() {
+    // 通常の敵を全消去（パーティクルだけ残す）
+    for (let i = gs.enemies.length - 1; i >= 0; i--) {
+      const e = gs.enemies[i];
+      if (!e.isBoss) {
+        spawnDeathParticles(e.x, e.y, e.color);
+        gs.enemies.splice(i, 1);
+      }
+    }
+    // ボスをプレイヤーから320px離れた場所にスポーン
+    const a = randAngle();
+    gs.enemies.push(new Boss(
+      gs.player.x + Math.cos(a) * 320,
+      gs.player.y + Math.sin(a) * 320
+    ));
+    this.announcement = 2.8;
+    screenShake(18, 0.7);
+    AudioManager.playBossAlert();
+    this.nextBossAt = Infinity; // 倒したあとに再設定
+  },
+
+  onBossDied(bx, by) {
+    // 大量XPオーブドロップ
+    for (let i = 0; i < 10; i++) {
+      spawnOrb(bx + randRange(-40,40), by + randRange(-40,40), 4);
+    }
+    screenShake(14, 0.55);
+    this.nextBossAt = gs.elapsed + this.interval;
+  },
+
+  // 画面固定のボスHPバー（ワールド変換の外で描く）
+  drawHUD(canvas, ctx) {
+    const boss = gs.enemies.find(e => e.isBoss);
+    if (!boss) return;
+    const bw = Math.min(canvas.width * 0.52, 380);
+    const bh = 13;
+    const bx = (canvas.width - bw) / 2;
+    const by = 56;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(bx-2, by-18, bw+4, bh+22);
+    ctx.shadowBlur = 8; ctx.shadowColor = '#ff0022';
+    ctx.fillStyle = '#ff4455';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠  DARK LORD  ⚠', canvas.width/2, by-5);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(60,0,10,0.9)';
+    ctx.fillRect(bx, by, bw, bh);
+    const pct = boss.hp / boss.maxHp;
+    ctx.fillStyle = pct > 0.5 ? '#ff3344' : pct > 0.25 ? '#ff8800' : '#ffee00';
+    ctx.shadowBlur = 5; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(bx, by, bw*pct, bh);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ff2244'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.restore();
+  },
+
+  // ボス出現テロップ
+  drawAnnouncement(canvas, ctx) {
+    if (this.announcement <= 0) return;
+    const fade  = this.announcement < 0.5 ? this.announcement / 0.5 : 1;
+    const scale = 1 + (1 - Math.min(1, this.announcement/2.8)) * 0.10;
+    ctx.save();
+    ctx.fillStyle = `rgba(160,0,20,${fade*0.22})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = fade;
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.scale(scale, scale);
+    ctx.textAlign = 'center';
+    ctx.shadowBlur  = 40; ctx.shadowColor = '#ff0022';
+    ctx.fillStyle   = '#ff1133';
+    ctx.font = `bold ${Math.round(Math.min(canvas.width*0.09, 60))}px 'Courier New'`;
+    ctx.fillText('⚠ BOSS APPEARS ⚠', 0, -28);
+    ctx.shadowBlur  = 0;
+    ctx.fillStyle   = 'rgba(255,190,190,0.88)';
+    ctx.font = `${Math.round(Math.min(canvas.width*0.040, 20))}px 'Courier New'`;
+    ctx.fillText('敵が全滅した… ボスが現れた！', 0, 24);
+    ctx.restore();
+  },
+
+  reset() {
+    this.nextBossAt   = 30;
+    this.announcement = 0;
+  },
+};
+
+// ════════════════════════════════════════════════════════
 //  16. AUDIO MANAGER (Web Audio API — 完全無料・外部依存ゼロ)
 // ════════════════════════════════════════════════════════
 const AudioManager = {
@@ -1639,6 +1881,36 @@ const AudioManager = {
     o.start(now); o.stop(now + 0.18);
   },
 
+  // ── SFX: ボス出現（重低音 + 上昇警報 + 余韻） ──
+  playBossAlert() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    // 重低音ドスン
+    const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+    o1.type = 'sawtooth'; o1.frequency.value = 50;
+    g1.gain.setValueAtTime(0.45, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now+1.4);
+    o1.connect(g1); g1.connect(this.sfxGain);
+    o1.start(now); o1.stop(now+1.5);
+    // 上昇警報音
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = 'square';
+    o2.frequency.setValueAtTime(100, now+0.15);
+    o2.frequency.exponentialRampToValueAtTime(440, now+0.7);
+    g2.gain.setValueAtTime(0.001, now+0.15);
+    g2.gain.linearRampToValueAtTime(0.28, now+0.35);
+    g2.gain.exponentialRampToValueAtTime(0.001, now+0.9);
+    o2.connect(g2); g2.connect(this.sfxGain);
+    o2.start(now+0.15); o2.stop(now+1.0);
+    // 余韻・高音キーン
+    const o3 = ctx.createOscillator(), g3 = ctx.createGain();
+    o3.type = 'sine'; o3.frequency.value = 880;
+    g3.gain.setValueAtTime(0.12, now+0.6);
+    g3.gain.exponentialRampToValueAtTime(0.001, now+1.6);
+    o3.connect(g3); g3.connect(this.sfxGain);
+    o3.start(now+0.6); o3.stop(now+1.7);
+  },
+
   // ── ミュート切り替え ──
   toggleMute() {
     this.muted = !this.muted;
@@ -1732,6 +2004,9 @@ function update(dt) {
   // remove dead enemies (centralized, after all weapons)
   cleanDeadEnemies();
 
+  // boss system
+  BossSystem.update(dt);
+
   // chest system
   ChestSystem.update(dt, gs.player);
 
@@ -1802,6 +2077,10 @@ function render() {
   gs.player.draw(ctx);
 
   ctx.restore();
+
+  // ── 画面固定のHUD・演出（ワールド変換の外）──
+  BossSystem.drawHUD(canvas, ctx);
+  BossSystem.drawAnnouncement(canvas, ctx);
 }
 
 function drawGrid(ctx) {
@@ -1885,6 +2164,7 @@ function initGame() {
 
   WeaponManager.reset();
   ChestSystem.reset();
+  BossSystem.reset();
   gs.pendingChest = false;
 
   // reset shake
