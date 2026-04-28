@@ -723,19 +723,26 @@ function updateBullets(dt, grid, bulletPool, canvas) {
         e.takeDamage(b.damage);
         b.hitSet.add(e);
         spawnHitParticle(b.x, b.y);
-        if (!e.alive) {
-          spawnDeathParticles(e.x, e.y, e.color);
-          spawnOrb(e.x, e.y, e.xpVal);
-          gs.kills++;
-          AudioManager.playKill();
-          gs.enemies.splice(gs.enemies.indexOf(e), 1);
-        }
         if (b.pierce <= 0) { b.alive = false; break; }
         b.pierce--;
       }
     }
   }
   bulletPool.releaseIf(b => !b.alive);
+}
+
+// 毎フレーム末に1回だけ呼ぶ — 複数武器による二重処理を防ぐ
+function cleanDeadEnemies() {
+  for (let i = gs.enemies.length - 1; i >= 0; i--) {
+    if (!gs.enemies[i].alive) {
+      const e = gs.enemies[i];
+      spawnDeathParticles(e.x, e.y, e.color);
+      spawnOrb(e.x, e.y, e.xpVal);
+      gs.kills++;
+      AudioManager.playKill();
+      gs.enemies.splice(i, 1);
+    }
+  }
 }
 
 function drawBullet(ctx, b) {
@@ -1087,7 +1094,387 @@ const Spawner = {
 };
 
 // ════════════════════════════════════════════════════════
-//  14. AUDIO MANAGER (Web Audio API — 完全無料・外部依存ゼロ)
+//  14. WEAPON SYSTEM
+// ════════════════════════════════════════════════════════
+
+// ── 武器①: オーブ（プレイヤーを周回する光球）──
+class WeaponOrbit {
+  constructor() {
+    this.type    = 'orbit';
+    this.level   = 1;
+    this.count   = 2;
+    this.orbitR  = 58;
+    this.damage  = 14;
+    this.speed   = 2.2;   // rad/s
+    this.angle   = 0;
+    this.cools   = new Map(); // 敵ごとのダメージクールダウン
+  }
+
+  levelUp() {
+    this.level++;
+    this.count++;
+    this.damage  = Math.round(this.damage * 1.2);
+    this.orbitR += 8;
+  }
+
+  update(dt, player, enemies) {
+    this.angle += this.speed * dt;
+    // クールダウン更新
+    for (const [k, v] of this.cools) {
+      if (v <= 0) this.cools.delete(k); else this.cools.set(k, v - dt);
+    }
+    for (let i = 0; i < this.count; i++) {
+      const a  = this.angle + (i / this.count) * Math.PI * 2;
+      const ox = player.x + Math.cos(a) * this.orbitR;
+      const oy = player.y + Math.sin(a) * this.orbitR;
+      for (const e of enemies) {
+        if (!e.alive || this.cools.has(e)) continue;
+        if (distSq(ox, oy, e.x, e.y) < (9 + e.radius) ** 2) {
+          e.takeDamage(this.damage);
+          this.cools.set(e, 0.45);
+          spawnHitParticle(ox, oy);
+        }
+      }
+    }
+  }
+
+  draw(ctx, player) {
+    const t = Date.now() * 0.001;
+    for (let i = 0; i < this.count; i++) {
+      const a  = this.angle + (i / this.count) * Math.PI * 2;
+      const ox = player.x + Math.cos(a) * this.orbitR;
+      const oy = player.y + Math.sin(a) * this.orbitR;
+      // 軌道リング（薄く）
+      if (i === 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, this.orbitR, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,200,50,0.12)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+      // オーブ本体
+      ctx.save();
+      ctx.shadowBlur = 16; ctx.shadowColor = '#ffcc00';
+      ctx.fillStyle = '#ffe040';
+      ctx.beginPath(); ctx.arc(ox, oy, 9, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff8b0';
+      ctx.beginPath(); ctx.arc(ox - 2.5, oy - 2.5, 4, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+}
+
+// ── 武器②: 衝撃波（定期的な全周爆発）──
+class WeaponShockwave {
+  constructor() {
+    this.type     = 'shockwave';
+    this.level    = 1;
+    this.interval = 4.2;
+    this.timer    = 3.0;
+    this.blastR   = 85;
+    this.damage   = 32;
+    this.waves    = [];  // [{r, alpha}] 視覚エフェクト用
+  }
+
+  levelUp() {
+    this.level++;
+    this.interval = Math.max(2.0, this.interval * 0.82);
+    this.blastR  += 22;
+    this.damage   = Math.round(this.damage * 1.25);
+  }
+
+  update(dt, player, enemies) {
+    this.timer -= dt;
+    for (const w of this.waves) { w.r += dt * 220; w.alpha -= dt * 2.2; }
+    this.waves = this.waves.filter(w => w.alpha > 0);
+
+    if (this.timer <= 0) {
+      this.timer = this.interval;
+      this.waves.push({ r: 8, alpha: 1.0 });
+      screenShake(6, 0.22);
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        if (distSq(player.x, player.y, e.x, e.y) < this.blastR ** 2) {
+          e.takeDamage(this.damage);
+          spawnHitParticle(e.x, e.y);
+        }
+      }
+    }
+  }
+
+  draw(ctx, player) {
+    for (const w of this.waves) {
+      ctx.save();
+      ctx.globalAlpha = w.alpha * 0.75;
+      ctx.strokeStyle = '#bb55ff';
+      ctx.lineWidth   = 3.5;
+      ctx.shadowBlur  = 18; ctx.shadowColor = '#aa00ff';
+      ctx.beginPath(); ctx.arc(player.x, player.y, w.r, 0, Math.PI*2); ctx.stroke();
+      // 外側の細いリング
+      ctx.globalAlpha = w.alpha * 0.35;
+      ctx.lineWidth   = 1;
+      ctx.beginPath(); ctx.arc(player.x, player.y, w.r + 5, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+// ── 武器③: ブーメラン（敵を追跡して戻ってくる）──
+class WeaponBoomerang {
+  constructor() {
+    this.type     = 'boomerang';
+    this.level    = 1;
+    this.interval = 2.8;
+    this.timer    = 1.5;
+    this.damage   = 38;
+    this.speed    = 310;
+    this.active   = [];
+  }
+
+  levelUp() {
+    this.level++;
+    this.interval = Math.max(1.2, this.interval * 0.82);
+    this.damage   = Math.round(this.damage * 1.25);
+  }
+
+  _nearest(player, enemies) {
+    let best = null, bestD = Infinity;
+    for (const e of enemies) {
+      const d = distSq(player.x, player.y, e.x, e.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+  }
+
+  update(dt, player, enemies) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = this.interval;
+      const tgt = this._nearest(player, enemies);
+      if (tgt) {
+        const dx = tgt.x - player.x, dy = tgt.y - player.y;
+        const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+        this.active.push({
+          x: player.x, y: player.y,
+          vx: dx/d * this.speed, vy: dy/d * this.speed,
+          phase: 'out',
+          maxD: Math.min(d + 40, 260),
+          dist: 0,
+          spin: 0,
+          hitSet: new Set(),
+        });
+      }
+    }
+    for (let i = this.active.length - 1; i >= 0; i--) {
+      const b = this.active[i];
+      b.spin += dt * 8;
+      if (b.phase === 'out') {
+        b.x += b.vx * dt; b.y += b.vy * dt;
+        b.dist += this.speed * dt;
+        if (b.dist >= b.maxD) b.phase = 'return';
+      } else {
+        const dx = player.x - b.x, dy = player.y - b.y;
+        const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+        b.x += dx/d * this.speed * 1.2 * dt;
+        b.y += dy/d * this.speed * 1.2 * dt;
+        if (d < 18) { this.active.splice(i, 1); continue; }
+      }
+      // 衝突判定
+      for (const e of enemies) {
+        if (!e.alive || b.hitSet.has(e)) continue;
+        if (distSq(b.x, b.y, e.x, e.y) < (11 + e.radius) ** 2) {
+          e.takeDamage(this.damage);
+          b.hitSet.add(e);
+          spawnHitParticle(b.x, b.y);
+        }
+      }
+    }
+  }
+
+  draw(ctx) {
+    for (const b of this.active) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.spin);
+      ctx.shadowBlur  = 16; ctx.shadowColor = b.phase === 'out' ? '#44ffcc' : '#ff9944';
+      // 三日月形
+      ctx.fillStyle = b.phase === 'out' ? '#44ffcc' : '#ffaa44';
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0.3, Math.PI - 0.3);
+      ctx.arc(0, 0, 5, Math.PI - 0.3, 0.3, true);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+}
+
+// ── WeaponManager ──
+const WeaponManager = {
+  weapons: [],
+
+  has(type)  { return this.weapons.some(w => w.type === type); },
+  get(type)  { return this.weapons.find(w => w.type === type); },
+
+  add(type) {
+    if (this.has(type)) {
+      this.get(type).levelUp();
+    } else {
+      switch(type) {
+        case 'orbit':     this.weapons.push(new WeaponOrbit());     break;
+        case 'shockwave': this.weapons.push(new WeaponShockwave()); break;
+        case 'boomerang': this.weapons.push(new WeaponBoomerang()); break;
+      }
+    }
+  },
+
+  update(dt, player, enemies) {
+    for (const w of this.weapons) w.update(dt, player, enemies);
+  },
+
+  draw(ctx, player) {
+    for (const w of this.weapons) w.draw(ctx, player);
+  },
+
+  reset() { this.weapons = []; },
+};
+
+// ════════════════════════════════════════════════════════
+//  15. TREASURE CHEST SYSTEM
+// ════════════════════════════════════════════════════════
+
+function drawChest(ctx, x, y) {
+  const t = Date.now() * 0.003;
+  ctx.save();
+  ctx.shadowBlur = 18 + 6 * Math.sin(t); ctx.shadowColor = '#ffd700';
+  // 胴体
+  ctx.fillStyle = '#6b3a1f';
+  ctx.beginPath(); ctx.roundRect(x - 15, y - 7, 30, 18, 3); ctx.fill();
+  // 蓋
+  ctx.fillStyle = '#8b4a2b';
+  ctx.beginPath(); ctx.roundRect(x - 15, y - 16, 30, 10, [3,3,0,0]); ctx.fill();
+  // 金の縁取り
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.8;
+  ctx.strokeRect(x - 15, y - 16, 30, 28);
+  ctx.beginPath(); ctx.moveTo(x - 15, y - 7); ctx.lineTo(x + 15, y - 7); ctx.stroke();
+  // 鍵穴
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(x, y + 2, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillRect(x - 2, y + 2, 4, 5);
+  // キラキラ
+  const sparkles = [[x+18, y-18], [x-20, y-14], [x+14, y+14]];
+  for (const [sx, sy] of sparkles) {
+    const p = 0.5 + 0.5 * Math.sin(t * 2 + sx);
+    ctx.globalAlpha = p;
+    ctx.fillStyle = '#fffaaa';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy-4); ctx.lineTo(sx+1, sy-1); ctx.lineTo(sx+4, sy);
+    ctx.lineTo(sx+1, sy+1); ctx.lineTo(sx, sy+4); ctx.lineTo(sx-1, sy+1);
+    ctx.lineTo(sx-4, sy); ctx.lineTo(sx-1, sy-1);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+const CHEST_REWARDS = [
+  { id:'orbit',     name:'オーブ召喚',    desc:'回転する光球が敵を攻撃する\n（取得済みの場合はレベルアップ）', icon:'🌟',
+    apply: () => WeaponManager.add('orbit') },
+  { id:'shockwave', name:'衝撃波',        desc:'一定時間ごとに全周爆発\n（取得済みの場合はレベルアップ）', icon:'💫',
+    apply: () => WeaponManager.add('shockwave') },
+  { id:'boomerang', name:'ブーメラン',    desc:'敵を追跡して戻ってくる弾\n（取得済みの場合はレベルアップ）', icon:'🌀',
+    apply: () => WeaponManager.add('boomerang') },
+  { id:'full_heal', name:'聖なる癒し',    desc:'HPを全回復する',              icon:'💖',
+    apply: p => { p.hp = p.maxHp; } },
+  { id:'big_dmg',   name:'魔力覚醒',      desc:'全攻撃力 +60%',              icon:'⚡',
+    apply: p => { p.damage *= 1.6; } },
+  { id:'storm',     name:'弾丸嵐',        desc:'弾数 +2・連射速度 +20%',     icon:'🔱',
+    apply: p => { p.bulletCount += 2; p.fireRate *= 1.2; } },
+];
+
+function showChestOverlay(player) {
+  const overlay = document.getElementById('chest-overlay');
+  const cards   = document.getElementById('chest-cards');
+  cards.innerHTML = '';
+
+  // 未取得の武器を優先して3択に並べる
+  const weapons = CHEST_REWARDS.slice(0, 3);
+  const others  = CHEST_REWARDS.slice(3);
+  const pool    = [...weapons, ...others].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  pool.forEach(reward => {
+    const owned = (reward.id === 'orbit' || reward.id === 'shockwave' || reward.id === 'boomerang')
+                  && WeaponManager.has(reward.id);
+    const card = document.createElement('div');
+    card.className = 'upgrade-card chest-card';
+    card.innerHTML = `
+      <div class="upgrade-icon">${reward.icon}</div>
+      <div>
+        <div class="upgrade-name">${reward.name}${owned ? ' <span class="lv-badge">Lv UP</span>' : ''}</div>
+        <div class="upgrade-desc">${reward.desc}</div>
+      </div>`;
+    const select = () => {
+      reward.apply(player);
+      overlay.classList.add('hidden');
+      gs.paused = false;
+    };
+    card.addEventListener('click', select);
+    card.addEventListener('touchend', e => { e.preventDefault(); select(); }, { passive: false });
+    cards.appendChild(card);
+  });
+
+  overlay.classList.remove('hidden');
+}
+
+const ChestSystem = {
+  chests:   [],
+  timer:    18,     // 最初の宝箱
+  interval: 22,     // 以降の間隔
+
+  update(dt, player) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = this.interval;
+      const a = randAngle();
+      const d = 180 + randRange(0, 120);
+      this.chests.push({ x: player.x + Math.cos(a)*d, y: player.y + Math.sin(a)*d });
+    }
+    for (let i = this.chests.length - 1; i >= 0; i--) {
+      const c = this.chests[i];
+      if (distSq(player.x, player.y, c.x, c.y) < (22 + player.radius) ** 2) {
+        this.chests.splice(i, 1);
+        // 金色パーティクルバースト
+        for (let j = 0; j < 22; j++) {
+          if (gs.particles.active.length >= C.MAX_PARTICLES) break;
+          const a2 = randAngle(), sp = randRange(90, 240);
+          const p = gs.particles.acquire();
+          p.x=c.x; p.y=c.y; p.vx=Math.cos(a2)*sp; p.vy=Math.sin(a2)*sp;
+          p.radius=randRange(3,6); p.color='#ffd700';
+          p.life=randRange(0.4,0.9); p.maxLife=p.life; p.alpha=1;
+        }
+        screenShake(9, 0.32);
+        gs.pendingChest = true;
+        gs.paused = true;
+        showChestOverlay(player);
+      }
+    }
+  },
+
+  draw(ctx) {
+    const t = Date.now() * 0.003;
+    for (const c of this.chests) {
+      drawChest(ctx, c.x, c.y + Math.sin(t + c.x * 0.01) * 3.5);
+    }
+  },
+
+  reset() { this.chests = []; this.timer = 18; },
+};
+
+// ════════════════════════════════════════════════════════
+//  16. AUDIO MANAGER (Web Audio API — 完全無料・外部依存ゼロ)
 // ════════════════════════════════════════════════════════
 const AudioManager = {
   ctx: null,
@@ -1305,6 +1692,7 @@ const gs = {
   grid:         null,
   kills:        0,
   diffLevel:    0,
+  pendingChest: false,
 };
 
 // ════════════════════════════════════════════════════════
@@ -1335,8 +1723,17 @@ function update(dt) {
     gs.enemies[i].update(dt, gs.player);
   }
 
-  // bullets + collision (may splice enemies)
+  // bullets + collision (may mark enemies dead)
   updateBullets(dt, gs.grid, gs.bullets, gs.canvas);
+
+  // extra weapons
+  WeaponManager.update(dt, gs.player, gs.enemies);
+
+  // remove dead enemies (centralized, after all weapons)
+  cleanDeadEnemies();
+
+  // chest system
+  ChestSystem.update(dt, gs.player);
 
   // particles / orbs
   updateParticles(dt);
@@ -1381,6 +1778,9 @@ function render() {
   // orbs
   for (const o of gs.orbs.active) drawOrb(ctx, o);
 
+  // chests (behind enemies)
+  ChestSystem.draw(ctx);
+
   // enemies
   for (const e of gs.enemies) e.draw(ctx);
 
@@ -1388,6 +1788,9 @@ function render() {
   ctx.save();
   for (const b of gs.bullets.active) drawBullet(ctx, b);
   ctx.restore();
+
+  // extra weapons (orbit orbs, shockwave rings, boomerangs)
+  WeaponManager.draw(ctx, gs.player);
 
   // particles (batched by alpha)
   ctx.save();
@@ -1479,6 +1882,10 @@ function initGame() {
 
   Spawner.waveT = 2;   // first wave at 2s
   Spawner.diffT = 0;
+
+  WeaponManager.reset();
+  ChestSystem.reset();
+  gs.pendingChest = false;
 
   // reset shake
   shake.x = shake.y = shake.timer = shake.intensity = 0;

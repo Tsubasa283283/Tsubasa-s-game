@@ -460,3 +460,103 @@ button:hover, button:active {
   color: var(--text);
   font-weight: bold;
 }
+
+/* ─── Chest Overlay ─── */
+#chest-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+#chest-title {
+  font-size: clamp(28px, 7vw, 48px);
+  font-weight: 900;
+  color: var(--neon-gold);
+  text-shadow: 0 0 20px var(--neon-gold), 0 0 50px rgba(255,215,0,0.5);
+  letter-spacing: 0.15em;
+  animation: chest-open 0.45s cubic-bezier(0.22,1.4,0.55,1) both;
+}
+
+@keyframes chest-open {
+  0%   { transform: scale(0.4) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+#chest-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(255, 215, 0, 0.55);
+  letter-spacing: 0.1em;
+}
+
+#chest-cards {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  padding: 0 16px;
+  max-width: 900px;
+  width: 100%;
+  justify-content: center;
+}
+
+.chest-card {
+  background: rgba(20, 14, 5, 0.96);
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  border-radius: 10px;
+  padding: 20px 16px;
+  flex: 1;
+  min-width: 0;
+  max-width: 240px;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: center;
+  transition: all 0.2s;
+  animation: card-appear 0.3s ease-out both;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.chest-card:nth-child(1) { animation-delay: 0.07s; }
+.chest-card:nth-child(2) { animation-delay: 0.15s; }
+.chest-card:nth-child(3) { animation-delay: 0.23s; }
+
+.chest-card:hover,
+.chest-card:active {
+  border-color: var(--neon-gold);
+  background: rgba(255, 215, 0, 0.08);
+  box-shadow: 0 0 22px rgba(255, 215, 0, 0.35);
+  transform: translateY(-3px);
+}
+
+.chest-card .upgrade-name {
+  color: var(--neon-gold);
+  text-shadow: 0 0 8px var(--neon-gold);
+}
+
+.lv-badge {
+  font-size: 10px;
+  color: var(--neon-orange);
+  text-shadow: 0 0 6px var(--neon-orange);
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 480px) {
+  #chest-cards {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .chest-card {
+    max-width: 100%;
+    width: 100%;
+    flex-direction: row;
+    text-align: left;
+    padding: 14px 16px;
+    gap: 14px;
+  }
+}
