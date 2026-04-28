@@ -1258,8 +1258,12 @@ const Spawner = {
   },
 
   _wave() {
-    const d     = gs.diffLevel;
-    const count = Math.min(8 + d * 5, C.MAX_ENEMIES - gs.enemies.length);
+    const d = gs.diffLevel;
+    // ボス出現後10秒は通常敵を最大2体に抑える
+    const bossQuiet = gs.elapsed < BossSystem.quietUntil;
+    const count = bossQuiet
+      ? Math.min(2, C.MAX_ENEMIES - gs.enemies.length)
+      : Math.min(8 + d * 5, C.MAX_ENEMIES - gs.enemies.length);
     if (count <= 0) return;
 
     // 1分ごとにフェーズが進み、dominant tierが切り替わる
@@ -1719,6 +1723,7 @@ const BossSystem = {
       gs.player.y + Math.sin(a) * 320
     ));
     this.announcement = 2.8;
+    this.quietUntil   = gs.elapsed + 10; // ボス出現後10秒は通常敵を減らす
     screenShake(18, 0.7);
     AudioManager.playBossAlert();
     this.nextBossAt = Infinity; // 倒したあとに再設定
@@ -1788,6 +1793,7 @@ const BossSystem = {
   reset() {
     this.nextBossAt   = 30;
     this.announcement = 0;
+    this.quietUntil   = 0;
   },
 };
 
