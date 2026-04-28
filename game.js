@@ -773,22 +773,40 @@ function _drawBoss(ctx, x, y, r, flash) {
 
 class Boss {
   constructor(x, y) {
-    this.x          = x;
-    this.y          = y;
-    this.isBoss     = true;
-    this.tier       = -1;
-    this.radius     = 34;
-    this.maxHp      = 320 + gs.diffLevel * 90;
-    this.hp         = this.maxHp;
-    this.speed      = 50 + gs.diffLevel * 3;
-    this.damage     = 25;
-    this.xpVal      = 20;
-    this.color      = '#ff2244';
-    this.glow       = '#ff0000';
-    this.alive      = true;
-    this.flashT     = 0;
-    this.angle      = 0;
+    this.x           = x;
+    this.y           = y;
+    this.isBoss      = true;
+    this.tier        = -1;
+    this.radius      = 34;
+    this.maxHp       = 320 + gs.diffLevel * 90;
+    this.hp          = this.maxHp;
+    this.speed       = 50 + gs.diffLevel * 3;
+    this.damage      = 25;
+    this.xpVal       = 20;
+    this.color       = '#ff2244';
+    this.glow        = '#ff0000';
+    this.alive       = true;
+    this.flashT      = 0;
+    this.angle       = 0;
     this.contactCool = 0;
+    // 遠距離攻撃（槍）
+    this.spearTimer    = 1.8;  // 最初の発射まで少し待つ
+    this.spearInterval = 2.4;
+    this.spears        = [];
+  }
+
+  _fireSpear(player) {
+    const dx = player.x - this.x, dy = player.y - this.y;
+    const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+    const spd = 230;
+    this.spears.push({
+      x: this.x, y: this.y,
+      vx: dx/d * spd, vy: dy/d * spd,
+      angle: Math.atan2(dy, dx),
+      damage: 14,
+      hit: false,
+      life: 3.5,
+    });
   }
 
   update(dt, player) {
@@ -800,9 +818,33 @@ class Boss {
     this.y += (dy/d) * this.speed * dt;
     if (this.flashT      > 0) this.flashT      -= dt;
     if (this.contactCool > 0) this.contactCool -= dt;
+
+    // 接触ダメージ
     if (d < this.radius + player.radius && this.contactCool <= 0) {
       player.takeDamage(this.damage);
       this.contactCool = 0.9;
+    }
+
+    // 遠距離攻撃
+    this.spearTimer -= dt;
+    if (this.spearTimer <= 0) {
+      this.spearTimer = this.spearInterval;
+      this._fireSpear(player);
+    }
+
+    // 槍の移動と命中判定
+    for (let i = this.spears.length - 1; i >= 0; i--) {
+      const s = this.spears[i];
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.life -= dt;
+      if (!s.hit && distSq(s.x, s.y, player.x, player.y) < (9 + player.radius) ** 2) {
+        player.takeDamage(s.damage);
+        s.hit  = true;
+        s.life = 0;
+        spawnHitParticle(s.x, s.y);
+      }
+      if (s.life <= 0) this.spears.splice(i, 1);
     }
   }
 
@@ -813,7 +855,32 @@ class Boss {
   }
 
   draw(ctx) {
+    // 槍を先に描画（プレイヤーの下に来ないよう）
+    for (const s of this.spears) {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.angle);
+      ctx.shadowBlur = 14; ctx.shadowColor = '#ff5500';
+      // 柄（暗い赤茶）
+      ctx.fillStyle = '#7a2200';
+      ctx.beginPath(); ctx.roundRect(-20, -2.8, 28, 5.6, 2); ctx.fill();
+      // 穂先（明るいオレンジ三角）
+      ctx.fillStyle = '#ff7722';
+      ctx.shadowBlur = 20; ctx.shadowColor = '#ff6600';
+      ctx.beginPath();
+      ctx.moveTo(8, -5); ctx.lineTo(24, 0); ctx.lineTo(8, 5);
+      ctx.closePath(); ctx.fill();
+      // ハイライト
+      ctx.fillStyle = '#ffcc88';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(11, -2.5); ctx.lineTo(20, 0); ctx.lineTo(13, 1.5);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
     _drawBoss(ctx, this.x, this.y, this.radius, this.flashT > 0);
+
     // 頭上のHPバー（常時表示）
     const bw = this.radius * 3.8, bh = 7;
     const bx = this.x - bw/2, by = this.y - this.radius - 18;
