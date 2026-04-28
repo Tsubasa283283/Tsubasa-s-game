@@ -2047,6 +2047,7 @@ const gs = {
   kills:        0,
   diffLevel:    0,
   pendingChest: false,
+  playerName:   '',
 };
 
 // ════════════════════════════════════════════════════════
@@ -2192,6 +2193,8 @@ function updateHUD() {
   document.getElementById('hud-level').textContent = `Lv ${p.level}`;
   document.getElementById('hud-kills').textContent = `${gs.kills} kills`;
   document.getElementById('xp-bar').style.width  = (p.xp / p.xpToNext * 100) + '%';
+  document.getElementById('hud-name').textContent = gs.playerName;
+  document.getElementById('hud-hp-text').textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
   const hpPct = p.hp / p.maxHp * 100;
   const hpEl  = document.getElementById('hp-bar');
   hpEl.style.width      = hpPct + '%';
@@ -2271,7 +2274,8 @@ window.addEventListener('DOMContentLoaded', () => {
   VirtualJoystick.init();
 
   document.getElementById('start-btn').addEventListener('click', () => {
-    AudioManager.resume(); // 初タップでAudioContext起動（モバイル対応）
+    AudioManager.resume();
+    gs.playerName = document.getElementById('player-name-input').value.trim() || 'SURVIVOR';
     initGame();
   });
   document.getElementById('restart-btn').addEventListener('click', () => {

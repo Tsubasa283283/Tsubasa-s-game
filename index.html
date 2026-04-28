@@ -20,6 +20,10 @@
         <span id="hud-kills">0 kills</span>
       </div>
       <div id="bars">
+        <div id="hud-name-row">
+          <span id="hud-name"></span>
+          <span id="hud-hp-text"></span>
+        </div>
         <div id="hp-bar-container">
           <div id="hp-bar"></div>
         </div>
@@ -76,6 +80,10 @@
           <div class="how-row"><span class="how-icon">⚡</span><span>攻撃は自動。近くの敵を狙う</span></div>
           <div class="how-row"><span class="how-icon">⭐</span><span>敵を倒すと経験値ゲット。レベルアップで強化を選択</span></div>
           <div class="how-row"><span class="how-icon">⏱️</span><span>時間が経つほど敵が強く・多くなる</span></div>
+        </div>
+        <div id="name-input-row">
+          <label for="player-name-input">あなたの名前</label>
+          <input id="player-name-input" type="text" maxlength="12" placeholder="名前を入力…" autocomplete="off" spellcheck="false">
         </div>
         <button id="start-btn">ゲームスタート</button>
       </div>

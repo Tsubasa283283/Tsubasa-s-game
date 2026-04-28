@@ -86,6 +86,72 @@ html, body {
   gap: 4px;
 }
 
+#hud-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+#hud-name {
+  color: var(--neon-blue);
+  text-shadow: 0 0 6px var(--neon-blue);
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#hud-hp-text {
+  color: var(--neon-green);
+  text-shadow: 0 0 6px var(--neon-green);
+  font-size: 10px;
+}
+
+/* ─── Name Input ─── */
+#name-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 340px;
+}
+
+#name-input-row label {
+  font-size: 12px;
+  color: rgba(224, 224, 255, 0.55);
+  letter-spacing: 0.08em;
+}
+
+#player-name-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 4px;
+  color: var(--neon-blue);
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: var(--neon-blue);
+}
+
+#player-name-input::placeholder {
+  color: rgba(0, 212, 255, 0.3);
+  font-weight: normal;
+}
+
+#player-name-input:focus {
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
+}
+
 #hp-bar-container,
 #xp-bar-container {
   width: 100%;
