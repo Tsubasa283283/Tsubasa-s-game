@@ -2226,19 +2226,19 @@ function drawDecorations(ctx) {
       const r = 7 + rng() * 11;
 
       if (type === 0) {
-        // ルーン円：外輪 + 十字
-        ctx.strokeStyle = '#9955ee'; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 6; ctx.shadowColor = '#7733cc';
+        // ルーン円：水色
+        ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6; ctx.shadowColor = '#0099cc';
         ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(wx, wy, r * 0.45, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
         ctx.shadowBlur = 0;
       } else if (type === 1) {
-        // クリスタル：菱形シルエット
-        ctx.fillStyle = '#2255aa';
-        ctx.strokeStyle = '#4488dd'; ctx.lineWidth = 1;
-        ctx.shadowBlur = 5; ctx.shadowColor = '#3366bb';
+        // クリスタル：白〜水色
+        ctx.fillStyle = '#aaddff';
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+        ctx.shadowBlur = 5; ctx.shadowColor = '#88ccff';
         ctx.beginPath();
         ctx.moveTo(wx,           wy - r);
         ctx.lineTo(wx + r * 0.4, wy);
@@ -2247,9 +2247,9 @@ function drawDecorations(ctx) {
         ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
       } else {
-        // 地面のひび：折れ線
-        ctx.strokeStyle = '#6633aa'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
-        ctx.shadowBlur = 4; ctx.shadowColor = '#442266';
+        // 地面のひび：白
+        ctx.strokeStyle = '#aaccee'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+        ctx.shadowBlur = 4; ctx.shadowColor = '#668899';
         ctx.beginPath();
         ctx.moveTo(wx - r,           wy + r * 0.2);
         ctx.lineTo(wx - r * 0.2,     wy - r * 0.3);
