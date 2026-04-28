@@ -1722,7 +1722,7 @@ const BossSystem = {
       gs.player.y + Math.sin(a) * 320
     ));
     this.announcement = 2.8;
-    this.quietUntil   = gs.elapsed + 10; // ボス出現後10秒は通常敵を減らす
+    this.quietUntil   = gs.elapsed + 5; // ボス出現後5秒は通常敵をスポーンしない
     screenShake(18, 0.7);
     AudioManager.playBossAlert();
     this.nextBossAt = Infinity; // 倒したあとに再設定
