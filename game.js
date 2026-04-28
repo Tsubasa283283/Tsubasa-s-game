@@ -2302,6 +2302,7 @@ function initGame() {
   const canvas = document.getElementById('gameCanvas');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
   const ctx = canvas.getContext('2d');
 
   gs.canvas  = canvas;
@@ -2364,17 +2365,19 @@ window.addEventListener('DOMContentLoaded', () => {
     AudioManager.toggleMute();
   });
 
-  // resize（orientationchange はリサイズ完了後に取得するため遅延）
+  // --app-height を JS で強制セット（LINE等の独自ブラウザ対策）
   function resizeCanvas() {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', h + 'px');
     if (gs.canvas) {
       gs.canvas.width  = w;
       gs.canvas.height = h;
     }
   }
+  resizeCanvas(); // 初回即実行
   window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 150));
 
   // prevent context menu on long press (mobile)
   document.addEventListener('contextmenu', e => e.preventDefault());
