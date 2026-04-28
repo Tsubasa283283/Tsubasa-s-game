@@ -1914,11 +1914,18 @@ const AudioManager = {
   startBGM() {
     if (!this.ctx) return;
     if (this._bgmTimer) clearTimeout(this._bgmTimer);
+    // 古い bgmGain を切り離して新規作成（スケジュール済みノードを無音化）
+    if (this.bgmGain) this.bgmGain.disconnect();
+    this.bgmGain = this.ctx.createGain();
+    this.bgmGain.gain.value = this.muted ? 0 : 0.30;
+    this.bgmGain.connect(this.master);
     this._scheduleLoop(this.ctx.currentTime + 0.15);
   },
 
   stopBGM() {
     if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
+    // bgmGain を切り離して鳴りかけのノードを即座に無音化
+    if (this.bgmGain) { this.bgmGain.disconnect(); this.bgmGain = null; }
   },
 
   // ── SFX: レベルアップ（上昇キラキラ） ──
