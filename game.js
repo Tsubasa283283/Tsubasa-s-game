@@ -727,6 +727,7 @@ function updateBullets(dt, grid, bulletPool, canvas) {
           spawnDeathParticles(e.x, e.y, e.color);
           spawnOrb(e.x, e.y, e.xpVal);
           gs.kills++;
+          AudioManager.playKill();
           gs.enemies.splice(gs.enemies.indexOf(e), 1);
         }
         if (b.pierce <= 0) { b.alive = false; break; }
@@ -992,6 +993,7 @@ const UPGRADES = [
 const UpgradeSystem = {
   show(player) {
     spawnLevelUpBurst(player.x, player.y);
+    AudioManager.playLevelUp();
     gs.paused = true;
 
     const overlay = document.getElementById('levelup-overlay');
@@ -1085,7 +1087,186 @@ const Spawner = {
 };
 
 // ════════════════════════════════════════════════════════
-//  14. SCREEN SHAKE
+//  14. AUDIO MANAGER (Web Audio API — 完全無料・外部依存ゼロ)
+// ════════════════════════════════════════════════════════
+const AudioManager = {
+  ctx: null,
+  master: null,
+  bgmGain: null,
+  sfxGain: null,
+  muted: false,
+  _bgmTimer: null,
+  _events: null,   // BGMイベントリスト
+  _loopLen: 0,     // ループ長（秒）
+  _lastKill: 0,    // 連続撃破SFX抑制用
+
+  // AudioContext初期化（初回タップ後に呼ぶ）
+  resume() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // マスター → BGM/SFXバス構成
+      this.master  = this.ctx.createGain(); this.master.gain.value  = 0.5;
+      this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = 0.30;
+      this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.65;
+      this.bgmGain.connect(this.master);
+      this.sfxGain.connect(this.master);
+      this.master.connect(this.ctx.destination);
+      this._buildBGM();
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+
+  // ── BGMシーケンス構築 ──
+  // Aマイナーペンタトニック、150BPM、4小節ループ（6.4秒）
+  _buildBGM() {
+    const BPM = 150;
+    const Q = 60 / BPM;   // 4分音符 = 0.400s
+    const E = Q / 2;      // 8分音符 = 0.200s
+    const S = Q / 4;      // 16分音符 = 0.100s
+    const evs = [];
+    const add = (t, f, dur, vol, type) => evs.push({ t, f, dur, vol, type });
+
+    // === メロディ（square波）4小節 ===
+    // 各小節 = 4Q = 1.6s、計 6.4s
+    const mel = [
+      // 小節1: Aマイナー上昇フレーズ
+      [440,E],[523.25,E],[659.25,E],[587.33,E],
+      [523.25,E],[440,E],[392,E],[329.63,E],
+      // 小節2: 答えフレーズ
+      [440,E],[392,E],[329.63,E],[293.66,E],
+      [329.63,Q],[440,Q],
+      // 小節3: テンション上昇
+      [523.25,E],[587.33,E],[659.25,E],[587.33,E],
+      [523.25,E],[440,E],[392,Q],
+      // 小節4: 解決・着地
+      [329.63,E],[392,E],[440,E],[523.25,E],
+      [440,Q],[220,Q],
+    ];
+    let mt = 0;
+    for (const [f, d] of mel) { add(mt, f, d * 0.80, 0.18, 'mel'); mt += d; }
+    this._loopLen = mt; // = 6.4s
+
+    // === ベース（sawtooth波）Aマイナーコード進行 ===
+    const bas = [
+      [110,Q],[164.81,Q],[110,Q],[98,Q],       // Am: A E A G
+      [110,Q],[164.81,Q],[130.81,Q],[110,Q],   // Am: A E C A
+      [130.81,Q],[98,Q],[130.81,Q],[110,Q],    // C:  C G C A
+      [164.81,Q],[110,Q],[146.83,Q],[110,Q],   // Em: E A D A
+    ];
+    let bt = 0;
+    for (const [f, d] of bas) { add(bt, f, d * 0.62, 0.12, 'bas'); bt += d; }
+
+    // === アルペジオ（triangle波）16分音符 ===
+    // 各コードを上昇→部分下降パターンで8ステップ × 2 = 1小節
+    const chords = [
+      [220, 261.63, 329.63, 440],      // Am
+      [196, 246.94, 293.66, 392],      // G
+      [174.61, 220, 261.63, 349.23],   // F
+      [164.81, 196, 246.94, 329.63],   // Em
+    ];
+    let at = 0;
+    for (const ch of chords) {
+      const pat = [ch[0],ch[1],ch[2],ch[3],ch[2],ch[1],ch[0],ch[1]];
+      for (let rep = 0; rep < 2; rep++) {
+        for (const f of pat) { add(at, f, S * 0.52, 0.065, 'arp'); at += S; }
+      }
+    }
+
+    this._events = evs;
+  },
+
+  // 1ループ分のノートをスケジュール登録し、終端で再帰呼び出し
+  _scheduleLoop(startTime) {
+    if (!this.ctx || !this._events) return;
+    for (const ev of this._events) {
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = ev.type === 'mel' ? 'square'
+               : ev.type === 'bas' ? 'sawtooth'
+               : 'triangle';
+      osc.frequency.value = ev.f;
+      const at = startTime + ev.t;
+      gain.gain.setValueAtTime(0.001, at);
+      gain.gain.linearRampToValueAtTime(ev.vol, at + 0.012);
+      gain.gain.setValueAtTime(ev.vol, at + ev.dur - 0.02);
+      gain.gain.linearRampToValueAtTime(0.001, at + ev.dur);
+      osc.connect(gain);
+      gain.connect(this.bgmGain);
+      osc.start(at);
+      osc.stop(at + ev.dur + 0.02);
+    }
+    // 次ループを 0.5秒前に予約
+    const next    = startTime + this._loopLen;
+    const waitMs  = Math.max(0, (next - this.ctx.currentTime - 0.5) * 1000);
+    this._bgmTimer = setTimeout(() => this._scheduleLoop(next), waitMs);
+  },
+
+  startBGM() {
+    if (!this.ctx) return;
+    if (this._bgmTimer) clearTimeout(this._bgmTimer);
+    this._scheduleLoop(this.ctx.currentTime + 0.15);
+  },
+
+  stopBGM() {
+    if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
+  },
+
+  // ── SFX: レベルアップ（上昇キラキラ） ──
+  playLevelUp() {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      const t = now + i * 0.075;
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.linearRampToValueAtTime(0.30, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      o.connect(g); g.connect(this.sfxGain);
+      o.start(t); o.stop(t + 0.5);
+    });
+    // 高音シマー
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = 'sine';
+    o2.frequency.setValueAtTime(1046.5, now + 0.35);
+    o2.frequency.exponentialRampToValueAtTime(2093, now + 0.85);
+    g2.gain.setValueAtTime(0.18, now + 0.35);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    o2.connect(g2); g2.connect(this.sfxGain);
+    o2.start(now + 0.35); o2.stop(now + 0.95);
+  },
+
+  // ── SFX: 敵撃破（短くドスン） ──
+  playKill() {
+    if (!this.ctx || this.muted) return;
+    const now = this.ctx.currentTime;
+    if (now - this._lastKill < 0.06) return; // 連打抑制
+    this._lastKill = now;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(380, now);
+    o.frequency.exponentialRampToValueAtTime(85, now + 0.13);
+    g.gain.setValueAtTime(0.22, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    o.connect(g); g.connect(this.sfxGain);
+    o.start(now); o.stop(now + 0.18);
+  },
+
+  // ── ミュート切り替え ──
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.master) {
+      this.master.gain.setTargetAtTime(
+        this.muted ? 0 : 0.5, this.ctx.currentTime, 0.08
+      );
+    }
+    const btn = document.getElementById('mute-btn');
+    if (btn) btn.textContent = this.muted ? '🔇' : '🔊';
+  },
+};
+
+// ════════════════════════════════════════════════════════
+//  15. SCREEN SHAKE
 // ════════════════════════════════════════════════════════
 const shake = { x:0, y:0, timer:0, intensity:0 };
 
@@ -1259,6 +1440,7 @@ function updateHUD() {
 // ════════════════════════════════════════════════════════
 function triggerGameOver() {
   gs.running = false;
+  AudioManager.stopBGM();
   document.getElementById('hud').classList.add('hidden');
   const overlay = document.getElementById('gameover-overlay');
   document.getElementById('stats-display').innerHTML = `
@@ -1306,6 +1488,9 @@ function initGame() {
   document.getElementById('start-overlay').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
 
+  AudioManager.stopBGM();
+  AudioManager.startBGM();
+
   requestAnimationFrame(ts => { gs.lastTime = ts; requestAnimationFrame(gameLoop); });
 }
 
@@ -1316,8 +1501,18 @@ window.addEventListener('DOMContentLoaded', () => {
   InputManager.init();
   VirtualJoystick.init();
 
-  document.getElementById('start-btn').addEventListener('click', initGame);
-  document.getElementById('restart-btn').addEventListener('click', initGame);
+  document.getElementById('start-btn').addEventListener('click', () => {
+    AudioManager.resume(); // 初タップでAudioContext起動（モバイル対応）
+    initGame();
+  });
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    AudioManager.resume();
+    initGame();
+  });
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    AudioManager.resume();
+    AudioManager.toggleMute();
+  });
 
   // resize
   window.addEventListener('resize', () => {
