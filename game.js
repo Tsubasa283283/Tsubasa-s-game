@@ -2300,13 +2300,17 @@ window.addEventListener('DOMContentLoaded', () => {
     AudioManager.toggleMute();
   });
 
-  // resize
-  window.addEventListener('resize', () => {
+  // resize（orientationchange はリサイズ完了後に取得するため遅延）
+  function resizeCanvas() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     if (gs.canvas) {
-      gs.canvas.width  = window.innerWidth;
-      gs.canvas.height = window.innerHeight;
+      gs.canvas.width  = w;
+      gs.canvas.height = h;
     }
-  });
+  }
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
 
   // prevent context menu on long press (mobile)
   document.addEventListener('contextmenu', e => e.preventDefault());
