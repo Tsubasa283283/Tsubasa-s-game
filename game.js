@@ -782,7 +782,7 @@ class Boss {
     this.hp         = this.maxHp;
     this.speed      = 50 + gs.diffLevel * 3;
     this.damage     = 25;
-    this.xpVal      = 40;
+    this.xpVal      = 20;
     this.color      = '#ff2244';
     this.glow       = '#ff0000';
     this.alive      = true;
@@ -1651,7 +1651,7 @@ const BossSystem = {
   onBossDied(bx, by) {
     // 大量XPオーブドロップ
     for (let i = 0; i < 10; i++) {
-      spawnOrb(bx + randRange(-40,40), by + randRange(-40,40), 4);
+      spawnOrb(bx + randRange(-40,40), by + randRange(-40,40), 2);
     }
     screenShake(14, 0.55);
     this.nextBossAt = gs.elapsed + this.interval;
