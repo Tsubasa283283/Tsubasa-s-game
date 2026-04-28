@@ -1262,7 +1262,8 @@ const Spawner = {
     // ボス出現後10秒は通常敵を最大2体に抑える
     const bossQuiet = gs.elapsed < BossSystem.quietUntil;
     if (bossQuiet) return; // ボス出現直後はスポーンしない
-    const count = Math.min(8 + d * 5, C.MAX_ENEMIES - gs.enemies.length);
+    const base  = gs.elapsed < 30 ? 4 : 8 + d * 5; // 最初の30秒は半分
+    const count = Math.min(base, C.MAX_ENEMIES - gs.enemies.length);
     if (count <= 0) return;
 
     // 1分ごとにフェーズが進み、dominant tierが切り替わる
