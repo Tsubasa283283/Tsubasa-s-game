@@ -1726,7 +1726,7 @@ const BossSystem = {
       hpMult
     ));
     this.announcement = 2.8;
-    this.quietUntil   = gs.elapsed + 2; // ボス出現後2秒は通常敵をスポーンしない
+    this.quietUntil   = gs.elapsed + 3; // ボス出現後3秒は通常敵をスポーンしない
     screenShake(18, 0.7);
     AudioManager.playBossAlert();
     this.nextBossAt = Infinity; // 倒したあとに再設定
