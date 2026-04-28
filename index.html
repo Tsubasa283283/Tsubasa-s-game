@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>SURVIVOR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="hud-top">
+        <span id="hud-timer">00:00</span>
+        <span id="hud-level">Lv 1</span>
+        <span id="hud-kills">0 kills</span>
+      </div>
+      <div id="bars">
+        <div id="hp-bar-container">
+          <div id="hp-bar"></div>
+        </div>
+        <div id="xp-bar-container">
+          <div id="xp-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Virtual Joystick -->
+    <div id="joystick-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- Level Up Overlay -->
+    <div id="levelup-overlay" class="overlay hidden">
+      <div id="levelup-header">
+        <div id="levelup-title">LEVEL UP!</div>
+        <div id="levelup-sub">Choose an upgrade</div>
+      </div>
+      <div id="upgrade-cards"></div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div id="gameover-content">
+        <div id="gameover-title">GAME OVER</div>
+        <div id="stats-display"></div>
+        <button id="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-overlay" class="overlay">
+      <div id="start-content">
+        <div id="start-title">SURVIVOR</div>
+        <div id="start-sub">押し寄せる敵から生き延びろ</div>
+        <div id="start-controls">
+          <div class="how-row"><span class="how-icon">🕹️</span><span>左下のジョイスティック（スマホ）<br>またはWASD/矢印キーで移動</span></div>
+          <div class="how-row"><span class="how-icon">⚡</span><span>攻撃は自動。近くの敵を狙う</span></div>
+          <div class="how-row"><span class="how-icon">⭐</span><span>敵を倒すと経験値ゲット。レベルアップで強化を選択</span></div>
+          <div class="how-row"><span class="how-icon">⏱️</span><span>時間が経つほど敵が強く・多くなる</span></div>
+        </div>
+        <button id="start-btn">ゲームスタート</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
