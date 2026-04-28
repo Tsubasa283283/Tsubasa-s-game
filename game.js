@@ -2146,6 +2146,9 @@ function render() {
   // background grid
   drawGrid(ctx);
 
+  // world decorations（移動実感用の背景オブジェクト）
+  drawDecorations(ctx);
+
   // orbs
   for (const o of gs.orbs.active) drawOrb(ctx, o);
 
@@ -2195,6 +2198,67 @@ function drawGrid(ctx) {
       ctx.fill();
     }
   }
+}
+
+function drawDecorations(ctx) {
+  const CELL = 210;
+  const px = gs.player.x, py = gs.player.y;
+  const hw = gs.canvas.width  / 2 + CELL * 1.5;
+  const hh = gs.canvas.height / 2 + CELL * 1.5;
+  const cx0 = Math.floor((px - hw) / CELL);
+  const cx1 = Math.ceil ((px + hw) / CELL);
+  const cy0 = Math.floor((py - hh) / CELL);
+  const cy1 = Math.ceil ((py + hh) / CELL);
+
+  ctx.save();
+
+  for (let cx = cx0; cx <= cx1; cx++) {
+    for (let cy = cy0; cy <= cy1; cy++) {
+      // セル座標から決定論的な乱数列を生成
+      let s = (Math.imul(cx, 0x9e3779) ^ Math.imul(cy, 0x85ebca)) >>> 0;
+      const rng = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 0x100000000; };
+
+      if (rng() < 0.28) continue; // ~28% のセルはスキップ
+
+      const wx   = cx * CELL + rng() * CELL;
+      const wy   = cy * CELL + rng() * CELL;
+      const type = Math.floor(rng() * 3);
+      const a    = 0.07 + rng() * 0.07;
+      const r    = 7   + rng() * 11;
+
+      ctx.globalAlpha = a;
+
+      if (type === 0) {
+        // ルーン円：外輪 + 十字
+        ctx.strokeStyle = '#6633aa'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(wx, wy, r * 0.45, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
+      } else if (type === 1) {
+        // クリスタル：菱形シルエット
+        ctx.fillStyle = '#334466';
+        ctx.beginPath();
+        ctx.moveTo(wx,           wy - r);
+        ctx.lineTo(wx + r * 0.4, wy);
+        ctx.lineTo(wx,           wy + r * 0.65);
+        ctx.lineTo(wx - r * 0.4, wy);
+        ctx.closePath(); ctx.fill();
+      } else {
+        // 地面のひび：折れ線
+        ctx.strokeStyle = '#3a1a44'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(wx - r,           wy + r * 0.2);
+        ctx.lineTo(wx - r * 0.2,     wy - r * 0.3);
+        ctx.lineTo(wx + r * 0.5,     wy + r * 0.1);
+        ctx.lineTo(wx + r,           wy - r * 0.2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 // ════════════════════════════════════════════════════════
