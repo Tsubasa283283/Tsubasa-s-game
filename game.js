@@ -1184,21 +1184,21 @@ const VirtualJoystick = {
 //  12. UPGRADES
 // ════════════════════════════════════════════════════════
 const UPGRADES = [
-  { id:'fire_rate',     name:'Rapid Fire',     desc:'Fire rate +25%',          icon:'⚡',
+  { id:'fire_rate',     name:'速射',         desc:'連射速度 +25%',           icon:'⚡',
     apply: p => { p.fireRate *= 1.25; } },
-  { id:'damage',        name:'Power Surge',    desc:'Damage +25%',             icon:'💥',
+  { id:'damage',        name:'攻撃強化',     desc:'攻撃力 +25%',             icon:'💥',
     apply: p => { p.damage  *= 1.25; } },
-  { id:'bullet_size',   name:'Big Shot',       desc:'Bullet area +35%',        icon:'🔵',
+  { id:'bullet_size',   name:'大弾',         desc:'弾の大きさ +35%',         icon:'🔵',
     apply: p => { p.bulletRadius *= 1.35; } },
-  { id:'bullet_count',  name:'Multishot',      desc:'+1 extra bullet',         icon:'🔱',
+  { id:'bullet_count',  name:'多重射撃',     desc:'弾数 +1',                 icon:'🔱',
     apply: p => { p.bulletCount += 1; } },
-  { id:'speed',         name:'Swift Boots',    desc:'Move speed +20%',         icon:'👟',
+  { id:'speed',         name:'俊足',         desc:'移動速度 +20%',           icon:'👟',
     apply: p => { p.speed   *= 1.20; } },
-  { id:'max_hp',        name:'Fortify',        desc:'Max HP +35, restore HP',  icon:'❤️',
+  { id:'max_hp',        name:'体力強化',     desc:'最大HP +35・HP回復',      icon:'❤️',
     apply: p => { p.maxHp  += 35; p.hp = Math.min(p.hp + 35, p.maxHp); } },
-  { id:'shield',        name:'Energy Shield',  desc:'Block 6 dmg per hit',     icon:'🛡️',
+  { id:'shield',        name:'魔法の盾',     desc:'被ダメージ -6/hit',       icon:'🛡️',
     apply: p => { p.shield += 6; } },
-  { id:'pierce',        name:'Penetrator',     desc:'Bullets pierce +1 enemy', icon:'🗡️',
+  { id:'pierce',        name:'貫通弾',       desc:'弾が敵を +1 貫通する',    icon:'🗡️',
     apply: p => { p.pierceCount += 1; } },
 ];
 
