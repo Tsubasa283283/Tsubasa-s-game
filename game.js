@@ -1191,17 +1191,26 @@ const Spawner = {
   },
 
   _wave() {
-    const d = gs.diffLevel;
+    const d     = gs.diffLevel;
     const count = Math.min(8 + d * 5, C.MAX_ENEMIES - gs.enemies.length);
     if (count <= 0) return;
 
-    // tier probability weights
-    const w = [
-      Math.max(0.15, 0.70 - d * 0.05),
-      Math.min(0.35, 0.10 + d * 0.04),
-      d > 2 ? Math.min(0.30, (d-2)*0.07) : 0,
-      d > 4 ? Math.min(0.20, (d-4)*0.04) : 0,
+    // 1分ごとにフェーズが進み、dominant tierが切り替わる
+    // 列: [スライム, シャドウフード, ゴーレム, ダークメイジ]
+    const PHASE_WEIGHTS = [
+      [0.85, 0.15, 0.00, 0.00],  // 0–1分
+      [0.45, 0.48, 0.07, 0.00],  // 1–2分
+      [0.10, 0.50, 0.33, 0.07],  // 2–3分
+      [0.00, 0.22, 0.50, 0.28],  // 3–4分
+      [0.00, 0.08, 0.40, 0.52],  // 4分以降
     ];
+    const mins    = gs.elapsed / 60;
+    const phase   = Math.floor(mins);
+    const progress = mins - phase;
+    const cur  = PHASE_WEIGHTS[Math.min(phase,   PHASE_WEIGHTS.length - 1)];
+    const next = PHASE_WEIGHTS[Math.min(phase+1, PHASE_WEIGHTS.length - 1)];
+    // フェーズ間をなめらかに補間
+    const w = cur.map((v, i) => v + (next[i] - v) * progress);
 
     for (let i = 0; i < count; i++) {
       const tier = this._pick(w);
