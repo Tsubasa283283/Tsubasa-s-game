@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+  <!-- LINE等の独自ブラウザ対策: DOMロード前にviewportを強制リセット -->
+  <script>
+    (function(){
+      var m = document.querySelector('meta[name="viewport"]');
+      if (m) m.content = 'width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,viewport-fit=cover';
+      // --app-height を最速で設定
+      var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', h + 'px');
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0a0a0f">
   <title>SURVIVOR</title>

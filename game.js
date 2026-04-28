@@ -2300,9 +2300,11 @@ function triggerGameOver() {
 // ════════════════════════════════════════════════════════
 function initGame() {
   const canvas = document.getElementById('gameCanvas');
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+  const _vv    = window.visualViewport;
+  canvas.width  = Math.round(_vv ? _vv.width  : window.innerWidth);
+  canvas.height = Math.round(_vv ? _vv.height : window.innerHeight);
+  document.documentElement.style.setProperty('--app-height', canvas.height + 'px');
+  document.documentElement.style.setProperty('--app-width',  canvas.width  + 'px');
   const ctx = canvas.getContext('2d');
 
   gs.canvas  = canvas;
@@ -2366,18 +2368,37 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --app-height を JS で強制セット（LINE等の独自ブラウザ対策）
+  // visualViewport が使えればそちらの値を優先（LINEのズーム検出に有効）
   function resizeCanvas() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const vv = window.visualViewport;
+    const w  = vv ? vv.width  : window.innerWidth;
+    const h  = vv ? vv.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', h + 'px');
+    document.documentElement.style.setProperty('--app-width',  w + 'px');
     if (gs.canvas) {
-      gs.canvas.width  = w;
-      gs.canvas.height = h;
+      gs.canvas.width  = Math.round(w);
+      gs.canvas.height = Math.round(h);
     }
   }
-  resizeCanvas(); // 初回即実行
+  resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resizeCanvas);
+    window.visualViewport.addEventListener('scroll', resizeCanvas);
+  }
   window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 150));
+
+  // ピンチズーム・ダブルタップズームを完全ブロック（LINE対策）
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  let _lastTap = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - _lastTap < 300) e.preventDefault();
+    _lastTap = now;
+  }, { passive: false });
 
   // prevent context menu on long press (mobile)
   document.addEventListener('contextmenu', e => e.preventDefault());
